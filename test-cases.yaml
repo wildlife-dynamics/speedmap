@@ -11,8 +11,13 @@ all-grouper:
     groupers:
       groupers: []
     time_range:
-      since: "2017-01-01T00:00:00Z"
-      until: "2017-03-31T23:59:59Z"
+      timezone:
+        label: UTC (UTC+00:00)
+        tzCode: UTC
+        name: (UTC+00:00) UTC
+        utc: '+00:00'
+      since: '2017-01-01T09:41:00.000'
+      until: '2017-01-16T09:41:00.000'
     subject_obs:
       subject_group_name: "Ecoscope"
       include_inactive: false
@@ -45,10 +50,10 @@ month-grouper:
         name: "mep_dev"
     groupers:
       groupers:
-        - "%B"
+        - temporal_index: "%B"
     time_range:
-      since: "2017-01-01T00:00:00Z"
-      until: "2017-03-31T23:59:59Z"
+      since: "2017-01-01T00:00:00"
+      until: "2017-03-31T23:59:59"
     subject_obs:
       subject_group_name: "Ecoscope"
       include_inactive: false
@@ -79,7 +84,7 @@ value-grouper:
         name: "mep_dev"
     groupers:
       groupers:
-        - "subject_name"
+        - index_name: "subject_name"
     time_range:
       since: "2017-01-01T00:00:00Z"
       until: "2017-03-31T23:59:59Z"

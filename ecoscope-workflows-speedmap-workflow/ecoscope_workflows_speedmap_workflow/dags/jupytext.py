@@ -11,29 +11,50 @@
 # ## Imports
 
 import os
-from ecoscope_workflows_core.tasks.config import set_workflow_details
-from ecoscope_workflows_core.tasks.io import set_er_connection
-from ecoscope_workflows_core.tasks.filter import set_time_range
-from ecoscope_workflows_ext_ecoscope.tasks.io import get_subjectgroup_observations
-from ecoscope_workflows_core.tasks.groupby import set_groupers
-from ecoscope_workflows_ext_ecoscope.tasks.preprocessing import process_relocations
-from ecoscope_workflows_ext_ecoscope.tasks.preprocessing import (
-    relocations_to_trajectory,
+
+from ecoscope_workflows_core.tasks.config import (
+    set_workflow_details as set_workflow_details,
 )
-from ecoscope_workflows_core.tasks.transformation import add_temporal_index
-from ecoscope_workflows_core.tasks.transformation import map_columns
-from ecoscope_workflows_ext_ecoscope.tasks.transformation import apply_classification
-from ecoscope_workflows_core.tasks.groupby import split_groups
-from ecoscope_workflows_ext_ecoscope.tasks.results import set_base_maps
-from ecoscope_workflows_core.tasks.transformation import sort_values
-from ecoscope_workflows_ext_ecoscope.tasks.transformation import apply_color_map
-from ecoscope_workflows_core.tasks.transformation import map_values_with_unit
-from ecoscope_workflows_ext_ecoscope.tasks.results import create_polyline_layer
-from ecoscope_workflows_ext_ecoscope.tasks.results import draw_ecomap
-from ecoscope_workflows_core.tasks.io import persist_text
-from ecoscope_workflows_core.tasks.results import create_map_widget_single_view
-from ecoscope_workflows_core.tasks.results import merge_widget_views
-from ecoscope_workflows_core.tasks.results import gather_dashboard
+from ecoscope_workflows_core.tasks.filter import set_time_range as set_time_range
+from ecoscope_workflows_core.tasks.groupby import set_groupers as set_groupers
+from ecoscope_workflows_core.tasks.groupby import split_groups as split_groups
+from ecoscope_workflows_core.tasks.io import persist_text as persist_text
+from ecoscope_workflows_core.tasks.io import set_er_connection as set_er_connection
+from ecoscope_workflows_core.tasks.results import (
+    create_map_widget_single_view as create_map_widget_single_view,
+)
+from ecoscope_workflows_core.tasks.results import gather_dashboard as gather_dashboard
+from ecoscope_workflows_core.tasks.results import (
+    merge_widget_views as merge_widget_views,
+)
+from ecoscope_workflows_core.tasks.transformation import (
+    add_temporal_index as add_temporal_index,
+)
+from ecoscope_workflows_core.tasks.transformation import map_columns as map_columns
+from ecoscope_workflows_core.tasks.transformation import (
+    map_values_with_unit as map_values_with_unit,
+)
+from ecoscope_workflows_core.tasks.transformation import sort_values as sort_values
+from ecoscope_workflows_ext_ecoscope.tasks.io import (
+    get_subjectgroup_observations as get_subjectgroup_observations,
+)
+from ecoscope_workflows_ext_ecoscope.tasks.preprocessing import (
+    process_relocations as process_relocations,
+)
+from ecoscope_workflows_ext_ecoscope.tasks.preprocessing import (
+    relocations_to_trajectory as relocations_to_trajectory,
+)
+from ecoscope_workflows_ext_ecoscope.tasks.results import (
+    create_polyline_layer as create_polyline_layer,
+)
+from ecoscope_workflows_ext_ecoscope.tasks.results import draw_ecomap as draw_ecomap
+from ecoscope_workflows_ext_ecoscope.tasks.results import set_base_maps as set_base_maps
+from ecoscope_workflows_ext_ecoscope.tasks.transformation import (
+    apply_classification as apply_classification,
+)
+from ecoscope_workflows_ext_ecoscope.tasks.transformation import (
+    apply_color_map as apply_color_map,
+)
 
 # %% [markdown]
 # ## Set Workflow Details
@@ -52,7 +73,9 @@ workflow_details_params = dict(
 
 
 workflow_details = (
-    set_workflow_details.handle_errors(task_instance_id="workflow_details")
+    set_workflow_details.set_task_instance_id("workflow_details")
+    .handle_errors()
+    .with_tracing()
     .partial(**workflow_details_params)
     .call()
 )
@@ -73,7 +96,9 @@ er_client_name_params = dict(
 
 
 er_client_name = (
-    set_er_connection.handle_errors(task_instance_id="er_client_name")
+    set_er_connection.set_task_instance_id("er_client_name")
+    .handle_errors()
+    .with_tracing()
     .partial(**er_client_name_params)
     .call()
 )
@@ -88,6 +113,7 @@ er_client_name = (
 time_range_params = dict(
     since=...,
     until=...,
+    timezone=...,
 )
 
 # %%
@@ -95,7 +121,9 @@ time_range_params = dict(
 
 
 time_range = (
-    set_time_range.handle_errors(task_instance_id="time_range")
+    set_time_range.set_task_instance_id("time_range")
+    .handle_errors()
+    .with_tracing()
     .partial(time_format="%d %b %Y %H:%M:%S %Z", **time_range_params)
     .call()
 )
@@ -109,7 +137,7 @@ time_range = (
 
 subject_obs_params = dict(
     subject_group_name=...,
-    include_subjectsource_details=...,
+    filter=...,
 )
 
 # %%
@@ -117,12 +145,15 @@ subject_obs_params = dict(
 
 
 subject_obs = (
-    get_subjectgroup_observations.handle_errors(task_instance_id="subject_obs")
+    get_subjectgroup_observations.set_task_instance_id("subject_obs")
+    .handle_errors()
+    .with_tracing()
     .partial(
         client=er_client_name,
         time_range=time_range,
         raise_on_empty=True,
         include_details=False,
+        include_subjectsource_details=False,
         **subject_obs_params,
     )
     .call()
@@ -144,7 +175,9 @@ groupers_params = dict(
 
 
 groupers = (
-    set_groupers.handle_errors(task_instance_id="groupers")
+    set_groupers.set_task_instance_id("groupers")
+    .handle_errors()
+    .with_tracing()
     .partial(**groupers_params)
     .call()
 )
@@ -163,7 +196,9 @@ subject_reloc_params = dict()
 
 
 subject_reloc = (
-    process_relocations.handle_errors(task_instance_id="subject_reloc")
+    process_relocations.set_task_instance_id("subject_reloc")
+    .handle_errors()
+    .with_tracing()
     .partial(
         observations=subject_obs,
         relocs_columns=[
@@ -201,7 +236,9 @@ subject_traj_params = dict(
 
 
 subject_traj = (
-    relocations_to_trajectory.handle_errors(task_instance_id="subject_traj")
+    relocations_to_trajectory.set_task_instance_id("subject_traj")
+    .handle_errors()
+    .with_tracing()
     .partial(relocations=subject_reloc, **subject_traj_params)
     .call()
 )
@@ -220,7 +257,9 @@ traj_add_temporal_index_params = dict()
 
 
 traj_add_temporal_index = (
-    add_temporal_index.handle_errors(task_instance_id="traj_add_temporal_index")
+    add_temporal_index.set_task_instance_id("traj_add_temporal_index")
+    .handle_errors()
+    .with_tracing()
     .partial(
         df=subject_traj,
         time_col="segment_start",
@@ -246,12 +285,15 @@ rename_grouper_columns_params = dict()
 
 
 rename_grouper_columns = (
-    map_columns.handle_errors(task_instance_id="rename_grouper_columns")
+    map_columns.set_task_instance_id("rename_grouper_columns")
+    .handle_errors()
+    .with_tracing()
     .partial(
         df=traj_add_temporal_index,
         drop_columns=[],
         retain_columns=[],
         rename_columns={"extra__name": "subject_name"},
+        raise_if_not_found=False,
         **rename_grouper_columns_params,
     )
     .call()
@@ -271,7 +313,9 @@ classify_traj_speed_params = dict()
 
 
 classify_traj_speed = (
-    apply_classification.handle_errors(task_instance_id="classify_traj_speed")
+    apply_classification.set_task_instance_id("classify_traj_speed")
+    .handle_errors()
+    .with_tracing()
     .partial(
         df=rename_grouper_columns,
         input_column_name="speed_kmhr",
@@ -297,7 +341,9 @@ split_subject_traj_groups_params = dict()
 
 
 split_subject_traj_groups = (
-    split_groups.handle_errors(task_instance_id="split_subject_traj_groups")
+    split_groups.set_task_instance_id("split_subject_traj_groups")
+    .handle_errors()
+    .with_tracing()
     .partial(
         df=classify_traj_speed, groupers=groupers, **split_subject_traj_groups_params
     )
@@ -320,7 +366,9 @@ base_map_defs_params = dict(
 
 
 base_map_defs = (
-    set_base_maps.handle_errors(task_instance_id="base_map_defs")
+    set_base_maps.set_task_instance_id("base_map_defs")
+    .handle_errors()
+    .with_tracing()
     .partial(**base_map_defs_params)
     .call()
 )
@@ -339,7 +387,9 @@ sort_traj_speed_params = dict()
 
 
 sort_traj_speed = (
-    sort_values.handle_errors(task_instance_id="sort_traj_speed")
+    sort_values.set_task_instance_id("sort_traj_speed")
+    .handle_errors()
+    .with_tracing()
     .partial(
         column_name="speed_bins",
         ascending=True,
@@ -363,7 +413,9 @@ colormap_traj_speed_params = dict()
 
 
 colormap_traj_speed = (
-    apply_color_map.handle_errors(task_instance_id="colormap_traj_speed")
+    apply_color_map.set_task_instance_id("colormap_traj_speed")
+    .handle_errors()
+    .with_tracing()
     .partial(
         input_column_name="speed_bins",
         output_column_name="speed_bins_colormap",
@@ -387,7 +439,9 @@ speedmap_legend_with_unit_params = dict()
 
 
 speedmap_legend_with_unit = (
-    map_values_with_unit.handle_errors(task_instance_id="speedmap_legend_with_unit")
+    map_values_with_unit.set_task_instance_id("speedmap_legend_with_unit")
+    .handle_errors()
+    .with_tracing()
     .partial(
         input_column_name="speed_bins",
         output_column_name="speed_bins_formatted",
@@ -415,7 +469,9 @@ traj_map_layers_params = dict(
 
 
 traj_map_layers = (
-    create_polyline_layer.handle_errors(task_instance_id="traj_map_layers")
+    create_polyline_layer.set_task_instance_id("traj_map_layers")
+    .handle_errors()
+    .with_tracing()
     .partial(
         layer_style={"color_column": "speed_bins_colormap"},
         legend={
@@ -437,6 +493,7 @@ traj_map_layers = (
 
 traj_ecomap_params = dict(
     view_state=...,
+    widget_id=...,
 )
 
 # %%
@@ -444,7 +501,9 @@ traj_ecomap_params = dict(
 
 
 traj_ecomap = (
-    draw_ecomap.handle_errors(task_instance_id="traj_ecomap")
+    draw_ecomap.set_task_instance_id("traj_ecomap")
+    .handle_errors()
+    .with_tracing()
     .partial(
         tile_layers=base_map_defs,
         north_arrow_style={"placement": "top-left"},
@@ -466,6 +525,7 @@ traj_ecomap = (
 
 ecomap_html_urls_params = dict(
     filename=...,
+    filename_suffix=...,
 )
 
 # %%
@@ -473,7 +533,9 @@ ecomap_html_urls_params = dict(
 
 
 ecomap_html_urls = (
-    persist_text.handle_errors(task_instance_id="ecomap_html_urls")
+    persist_text.set_task_instance_id("ecomap_html_urls")
+    .handle_errors()
+    .with_tracing()
     .partial(
         root_path=os.environ["ECOSCOPE_WORKFLOWS_RESULTS"], **ecomap_html_urls_params
     )
@@ -494,9 +556,9 @@ traj_map_widgets_single_views_params = dict()
 
 
 traj_map_widgets_single_views = (
-    create_map_widget_single_view.handle_errors(
-        task_instance_id="traj_map_widgets_single_views"
-    )
+    create_map_widget_single_view.set_task_instance_id("traj_map_widgets_single_views")
+    .handle_errors()
+    .with_tracing()
     .partial(title="Subject Group Speed Map", **traj_map_widgets_single_views_params)
     .map(argnames=["view", "data"], argvalues=ecomap_html_urls)
 )
@@ -515,7 +577,9 @@ traj_grouped_map_widget_params = dict()
 
 
 traj_grouped_map_widget = (
-    merge_widget_views.handle_errors(task_instance_id="traj_grouped_map_widget")
+    merge_widget_views.set_task_instance_id("traj_grouped_map_widget")
+    .handle_errors()
+    .with_tracing()
     .partial(widgets=traj_map_widgets_single_views, **traj_grouped_map_widget_params)
     .call()
 )
@@ -527,17 +591,21 @@ traj_grouped_map_widget = (
 # %%
 # parameters
 
-speedmap_dashboard_params = dict()
+speedmap_dashboard_params = dict(
+    warning=...,
+)
 
 # %%
 # call the task
 
 
 speedmap_dashboard = (
-    gather_dashboard.handle_errors(task_instance_id="speedmap_dashboard")
+    gather_dashboard.set_task_instance_id("speedmap_dashboard")
+    .handle_errors()
+    .with_tracing()
     .partial(
         details=workflow_details,
-        widgets=traj_grouped_map_widget,
+        widgets=[traj_grouped_map_widget],
         time_range=time_range,
         groupers=groupers,
         **speedmap_dashboard_params,

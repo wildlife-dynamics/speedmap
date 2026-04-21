@@ -3,18 +3,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from typing import List, Literal, Optional, Union
 
-from pydantic import (
-    AwareDatetime,
-    BaseModel,
-    ConfigDict,
-    Field,
-    RootModel,
-    confloat,
-    constr,
-)
+from pydantic import BaseModel, ConfigDict, Field, RootModel, confloat, constr
 
 
 class WorkflowDetails(BaseModel):
@@ -25,23 +18,27 @@ class WorkflowDetails(BaseModel):
     description: Optional[str] = Field("", title="Workflow Description")
 
 
-class TimeRange(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    since: AwareDatetime = Field(..., description="The start time", title="Since")
-    until: AwareDatetime = Field(..., description="The end time", title="Until")
+class Filter(str, Enum):
+    none = "none"
+    clean = "clean"
+    manually_filtered = "manually_filtered"
+    automatically_filtered = "automatically_filtered"
+    manually_and_automatically_filtered = "manually_and_automatically_filtered"
 
 
 class SubjectObs(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    subject_group_name: str = Field(..., title="Subject Group Name")
-    include_subjectsource_details: Optional[bool] = Field(
-        False,
-        description="Whether or not to include subject source details",
-        title="Include Subjectsource Details",
+    subject_group_name: str = Field(
+        ...,
+        description="⚠️ The use of a group with mixed subtypes could lead to unexpected results",
+        title="Subject Group Name",
+    )
+    filter: Optional[Filter] = Field(
+        "clean",
+        description="Filter observations based on exclusion flags.",
+        title="Filter",
     )
 
 
@@ -215,12 +212,27 @@ class EarthRangerConnection(BaseModel):
     name: str = Field(..., title="Data Source")
 
 
-class TemporalGrouper(RootModel[str]):
-    root: str = Field(..., title="Time")
+class TimezoneInfo(BaseModel):
+    label: str = Field(..., title="Label")
+    tzCode: str = Field(..., title="Tzcode")
+    name: str = Field(..., title="Name")
+    utc: str = Field(..., title="Utc")
 
 
-class ValueGrouper(RootModel[str]):
-    root: str = Field(..., title="Category")
+class SpatialGrouper(BaseModel):
+    spatial_index_name: str = Field(..., title="Spatial Regions")
+
+
+class TemporalGrouper(BaseModel):
+    temporal_index: str = Field(..., title="Time")
+
+
+class ValueGrouper1(BaseModel):
+    index_name: str = Field(..., title="Category")
+
+
+class ValueGrouper(RootModel[ValueGrouper1]):
+    root: ValueGrouper1 = Field(..., title="Category")
 
 
 class TrajectorySegmentFilter(BaseModel):
@@ -253,14 +265,25 @@ class ErClientName(BaseModel):
     )
 
 
+class TimeRange(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    since: datetime = Field(..., description="The start time", title="Since")
+    until: datetime = Field(..., description="The end time", title="Until")
+    timezone: Optional[TimezoneInfo] = Field(None, title="Timezone")
+
+
 class Groupers(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    groupers: Optional[List[Union[ValueGrouper, TemporalGrouper]]] = Field(
-        None,
-        description="            Specify how the data should be grouped to create the views for your dashboard.\n            This field is optional; if left blank, all the data will appear in a single view.\n            ",
-        title=" ",
+    groupers: Optional[List[Union[ValueGrouper, TemporalGrouper, SpatialGrouper]]] = (
+        Field(
+            None,
+            description="            Specify how the data should be grouped to create the views for your dashboard.\n            This field is optional; if left blank, all the data will appear in a single view.\n            ",
+            title=" ",
+        )
     )
 
 

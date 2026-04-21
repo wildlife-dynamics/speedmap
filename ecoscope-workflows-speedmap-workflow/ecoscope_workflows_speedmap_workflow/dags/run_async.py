@@ -3,30 +3,49 @@ import json
 import os
 
 from ecoscope_workflows_core.graph import DependsOn, Graph, Node
-
-from ecoscope_workflows_core.tasks.config import set_workflow_details
-from ecoscope_workflows_core.tasks.io import set_er_connection
-from ecoscope_workflows_core.tasks.filter import set_time_range
-from ecoscope_workflows_ext_ecoscope.tasks.io import get_subjectgroup_observations
-from ecoscope_workflows_core.tasks.groupby import set_groupers
-from ecoscope_workflows_ext_ecoscope.tasks.preprocessing import process_relocations
-from ecoscope_workflows_ext_ecoscope.tasks.preprocessing import (
-    relocations_to_trajectory,
+from ecoscope_workflows_core.tasks.config import (
+    set_workflow_details as set_workflow_details,
 )
-from ecoscope_workflows_core.tasks.transformation import add_temporal_index
-from ecoscope_workflows_core.tasks.transformation import map_columns
-from ecoscope_workflows_ext_ecoscope.tasks.transformation import apply_classification
-from ecoscope_workflows_core.tasks.groupby import split_groups
-from ecoscope_workflows_ext_ecoscope.tasks.results import set_base_maps
-from ecoscope_workflows_core.tasks.transformation import sort_values
-from ecoscope_workflows_ext_ecoscope.tasks.transformation import apply_color_map
-from ecoscope_workflows_core.tasks.transformation import map_values_with_unit
-from ecoscope_workflows_ext_ecoscope.tasks.results import create_polyline_layer
-from ecoscope_workflows_ext_ecoscope.tasks.results import draw_ecomap
-from ecoscope_workflows_core.tasks.io import persist_text
-from ecoscope_workflows_core.tasks.results import create_map_widget_single_view
-from ecoscope_workflows_core.tasks.results import merge_widget_views
-from ecoscope_workflows_core.tasks.results import gather_dashboard
+from ecoscope_workflows_core.tasks.filter import set_time_range as set_time_range
+from ecoscope_workflows_core.tasks.groupby import set_groupers as set_groupers
+from ecoscope_workflows_core.tasks.groupby import split_groups as split_groups
+from ecoscope_workflows_core.tasks.io import persist_text as persist_text
+from ecoscope_workflows_core.tasks.io import set_er_connection as set_er_connection
+from ecoscope_workflows_core.tasks.results import (
+    create_map_widget_single_view as create_map_widget_single_view,
+)
+from ecoscope_workflows_core.tasks.results import gather_dashboard as gather_dashboard
+from ecoscope_workflows_core.tasks.results import (
+    merge_widget_views as merge_widget_views,
+)
+from ecoscope_workflows_core.tasks.transformation import (
+    add_temporal_index as add_temporal_index,
+)
+from ecoscope_workflows_core.tasks.transformation import map_columns as map_columns
+from ecoscope_workflows_core.tasks.transformation import (
+    map_values_with_unit as map_values_with_unit,
+)
+from ecoscope_workflows_core.tasks.transformation import sort_values as sort_values
+from ecoscope_workflows_ext_ecoscope.tasks.io import (
+    get_subjectgroup_observations as get_subjectgroup_observations,
+)
+from ecoscope_workflows_ext_ecoscope.tasks.preprocessing import (
+    process_relocations as process_relocations,
+)
+from ecoscope_workflows_ext_ecoscope.tasks.preprocessing import (
+    relocations_to_trajectory as relocations_to_trajectory,
+)
+from ecoscope_workflows_ext_ecoscope.tasks.results import (
+    create_polyline_layer as create_polyline_layer,
+)
+from ecoscope_workflows_ext_ecoscope.tasks.results import draw_ecomap as draw_ecomap
+from ecoscope_workflows_ext_ecoscope.tasks.results import set_base_maps as set_base_maps
+from ecoscope_workflows_ext_ecoscope.tasks.transformation import (
+    apply_classification as apply_classification,
+)
+from ecoscope_workflows_ext_ecoscope.tasks.transformation import (
+    apply_color_map as apply_color_map,
+)
 
 from ..params import Params
 
@@ -66,21 +85,27 @@ def main(params: Params):
     nodes = {
         "workflow_details": Node(
             async_task=set_workflow_details.validate()
-            .handle_errors(task_instance_id="workflow_details")
+            .set_task_instance_id("workflow_details")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial=(params_dict.get("workflow_details") or {}),
             method="call",
         ),
         "er_client_name": Node(
             async_task=set_er_connection.validate()
-            .handle_errors(task_instance_id="er_client_name")
+            .set_task_instance_id("er_client_name")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial=(params_dict.get("er_client_name") or {}),
             method="call",
         ),
         "time_range": Node(
             async_task=set_time_range.validate()
-            .handle_errors(task_instance_id="time_range")
+            .set_task_instance_id("time_range")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "time_format": "%d %b %Y %H:%M:%S %Z",
@@ -90,27 +115,34 @@ def main(params: Params):
         ),
         "subject_obs": Node(
             async_task=get_subjectgroup_observations.validate()
-            .handle_errors(task_instance_id="subject_obs")
+            .set_task_instance_id("subject_obs")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "client": DependsOn("er_client_name"),
                 "time_range": DependsOn("time_range"),
                 "raise_on_empty": True,
                 "include_details": False,
+                "include_subjectsource_details": False,
             }
             | (params_dict.get("subject_obs") or {}),
             method="call",
         ),
         "groupers": Node(
             async_task=set_groupers.validate()
-            .handle_errors(task_instance_id="groupers")
+            .set_task_instance_id("groupers")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial=(params_dict.get("groupers") or {}),
             method="call",
         ),
         "subject_reloc": Node(
             async_task=process_relocations.validate()
-            .handle_errors(task_instance_id="subject_reloc")
+            .set_task_instance_id("subject_reloc")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "observations": DependsOn("subject_obs"),
@@ -124,9 +156,18 @@ def main(params: Params):
                     "extra__subject__sex",
                 ],
                 "filter_point_coords": [
-                    {"x": 180.0, "y": 90.0},
-                    {"x": 0.0, "y": 0.0},
-                    {"x": 1.0, "y": 1.0},
+                    {
+                        "x": 180.0,
+                        "y": 90.0,
+                    },
+                    {
+                        "x": 0.0,
+                        "y": 0.0,
+                    },
+                    {
+                        "x": 1.0,
+                        "y": 1.0,
+                    },
                 ],
             }
             | (params_dict.get("subject_reloc") or {}),
@@ -134,7 +175,9 @@ def main(params: Params):
         ),
         "subject_traj": Node(
             async_task=relocations_to_trajectory.validate()
-            .handle_errors(task_instance_id="subject_traj")
+            .set_task_instance_id("subject_traj")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "relocations": DependsOn("subject_reloc"),
@@ -144,7 +187,9 @@ def main(params: Params):
         ),
         "traj_add_temporal_index": Node(
             async_task=add_temporal_index.validate()
-            .handle_errors(task_instance_id="traj_add_temporal_index")
+            .set_task_instance_id("traj_add_temporal_index")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "df": DependsOn("subject_traj"),
@@ -158,34 +203,47 @@ def main(params: Params):
         ),
         "rename_grouper_columns": Node(
             async_task=map_columns.validate()
-            .handle_errors(task_instance_id="rename_grouper_columns")
+            .set_task_instance_id("rename_grouper_columns")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "df": DependsOn("traj_add_temporal_index"),
-                "drop_columns": [],
-                "retain_columns": [],
-                "rename_columns": {"extra__name": "subject_name"},
+                "rename_columns": {
+                    "extra__name": "subject_name",
+                },
+                "raise_if_not_found": False,
             }
             | (params_dict.get("rename_grouper_columns") or {}),
             method="call",
         ),
         "classify_traj_speed": Node(
             async_task=apply_classification.validate()
-            .handle_errors(task_instance_id="classify_traj_speed")
+            .set_task_instance_id("classify_traj_speed")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "df": DependsOn("rename_grouper_columns"),
                 "input_column_name": "speed_kmhr",
                 "output_column_name": "speed_bins",
-                "classification_options": {"scheme": "equal_interval", "k": 6},
-                "label_options": {"label_ranges": False, "label_decimals": 1},
+                "classification_options": {
+                    "scheme": "equal_interval",
+                    "k": 6,
+                },
+                "label_options": {
+                    "label_ranges": False,
+                    "label_decimals": 1,
+                },
             }
             | (params_dict.get("classify_traj_speed") or {}),
             method="call",
         ),
         "split_subject_traj_groups": Node(
             async_task=split_groups.validate()
-            .handle_errors(task_instance_id="split_subject_traj_groups")
+            .set_task_instance_id("split_subject_traj_groups")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "df": DependsOn("classify_traj_speed"),
@@ -196,14 +254,18 @@ def main(params: Params):
         ),
         "base_map_defs": Node(
             async_task=set_base_maps.validate()
-            .handle_errors(task_instance_id="base_map_defs")
+            .set_task_instance_id("base_map_defs")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial=(params_dict.get("base_map_defs") or {}),
             method="call",
         ),
         "sort_traj_speed": Node(
             async_task=sort_values.validate()
-            .handle_errors(task_instance_id="sort_traj_speed")
+            .set_task_instance_id("sort_traj_speed")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "column_name": "speed_bins",
@@ -219,7 +281,9 @@ def main(params: Params):
         ),
         "colormap_traj_speed": Node(
             async_task=apply_color_map.validate()
-            .handle_errors(task_instance_id="colormap_traj_speed")
+            .set_task_instance_id("colormap_traj_speed")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "input_column_name": "speed_bins",
@@ -242,7 +306,9 @@ def main(params: Params):
         ),
         "speedmap_legend_with_unit": Node(
             async_task=map_values_with_unit.validate()
-            .handle_errors(task_instance_id="speedmap_legend_with_unit")
+            .set_task_instance_id("speedmap_legend_with_unit")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "input_column_name": "speed_bins",
@@ -260,15 +326,23 @@ def main(params: Params):
         ),
         "traj_map_layers": Node(
             async_task=create_polyline_layer.validate()
-            .handle_errors(task_instance_id="traj_map_layers")
+            .set_task_instance_id("traj_map_layers")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
-                "layer_style": {"color_column": "speed_bins_colormap"},
+                "layer_style": {
+                    "color_column": "speed_bins_colormap",
+                },
                 "legend": {
                     "label_column": "speed_bins_formatted",
                     "color_column": "speed_bins_colormap",
                 },
-                "tooltip_columns": ["subject_name", "subject_subtype", "speed_kmhr"],
+                "tooltip_columns": [
+                    "subject_name",
+                    "subject_subtype",
+                    "speed_kmhr",
+                ],
             }
             | (params_dict.get("traj_map_layers") or {}),
             method="mapvalues",
@@ -279,12 +353,18 @@ def main(params: Params):
         ),
         "traj_ecomap": Node(
             async_task=draw_ecomap.validate()
-            .handle_errors(task_instance_id="traj_ecomap")
+            .set_task_instance_id("traj_ecomap")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "tile_layers": DependsOn("base_map_defs"),
-                "north_arrow_style": {"placement": "top-left"},
-                "legend_style": {"placement": "bottom-right"},
+                "north_arrow_style": {
+                    "placement": "top-left",
+                },
+                "legend_style": {
+                    "placement": "bottom-right",
+                },
                 "static": False,
                 "title": None,
                 "max_zoom": 20,
@@ -298,7 +378,9 @@ def main(params: Params):
         ),
         "ecomap_html_urls": Node(
             async_task=persist_text.validate()
-            .handle_errors(task_instance_id="ecomap_html_urls")
+            .set_task_instance_id("ecomap_html_urls")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "root_path": os.environ["ECOSCOPE_WORKFLOWS_RESULTS"],
@@ -312,7 +394,9 @@ def main(params: Params):
         ),
         "traj_map_widgets_single_views": Node(
             async_task=create_map_widget_single_view.validate()
-            .handle_errors(task_instance_id="traj_map_widgets_single_views")
+            .set_task_instance_id("traj_map_widgets_single_views")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "title": "Subject Group Speed Map",
@@ -326,7 +410,9 @@ def main(params: Params):
         ),
         "traj_grouped_map_widget": Node(
             async_task=merge_widget_views.validate()
-            .handle_errors(task_instance_id="traj_grouped_map_widget")
+            .set_task_instance_id("traj_grouped_map_widget")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "widgets": DependsOn("traj_map_widgets_single_views"),
@@ -336,11 +422,15 @@ def main(params: Params):
         ),
         "speedmap_dashboard": Node(
             async_task=gather_dashboard.validate()
-            .handle_errors(task_instance_id="speedmap_dashboard")
+            .set_task_instance_id("speedmap_dashboard")
+            .handle_errors()
+            .with_tracing()
             .set_executor("lithops"),
             partial={
                 "details": DependsOn("workflow_details"),
-                "widgets": DependsOn("traj_grouped_map_widget"),
+                "widgets": [
+                    DependsOn("traj_grouped_map_widget"),
+                ],
                 "time_range": DependsOn("time_range"),
                 "groupers": DependsOn("groupers"),
             }
